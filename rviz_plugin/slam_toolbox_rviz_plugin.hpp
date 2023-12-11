@@ -41,7 +41,7 @@
 #include "rviz_common/panel.hpp"
 #include "slam_toolbox/toolbox_msgs.hpp"
 #include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 
 class QLineEdit;
 class QSpinBox;
@@ -139,16 +139,16 @@ protected:
   QFrame * _line;
 
   rclcpp::Node::SharedPtr ros_node_;
-  rclcpp::Client<slam_toolbox::srv::Clear>::SharedPtr _clearChanges;
-  rclcpp::Client<slam_toolbox::srv::LoopClosure>::SharedPtr _saveChanges;
-  rclcpp::Client<slam_toolbox::srv::SaveMap>::SharedPtr _saveMap;
-  rclcpp::Client<slam_toolbox::srv::ClearQueue>::SharedPtr _clearQueue;
-  rclcpp::Client<slam_toolbox::srv::ToggleInteractive>::SharedPtr _interactive;
-  rclcpp::Client<slam_toolbox::srv::Pause>::SharedPtr _pause_measurements;
-  rclcpp::Client<slam_toolbox::srv::AddSubmap>::SharedPtr _load_submap_for_merging;
-  rclcpp::Client<slam_toolbox::srv::MergeMaps>::SharedPtr _merge;
-  rclcpp::Client<slam_toolbox::srv::SerializePoseGraph>::SharedPtr _serialize;
-  rclcpp::Client<slam_toolbox::srv::DeserializePoseGraph>::SharedPtr _load_map;
+  rclcpp::Client<nt_slam_toolbox::srv::Clear>::SharedPtr _clearChanges;
+  rclcpp::Client<nt_slam_toolbox::srv::LoopClosure>::SharedPtr _saveChanges;
+  rclcpp::Client<nt_slam_toolbox::srv::SaveMap>::SharedPtr _saveMap;
+  rclcpp::Client<nt_slam_toolbox::srv::ClearQueue>::SharedPtr _clearQueue;
+  rclcpp::Client<nt_slam_toolbox::srv::ToggleInteractive>::SharedPtr _interactive;
+  rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr _pause_measurements;
+  rclcpp::Client<nt_slam_toolbox::srv::AddSubmap>::SharedPtr _load_submap_for_merging;
+  rclcpp::Client<nt_slam_toolbox::srv::MergeMaps>::SharedPtr _merge;
+  rclcpp::Client<nt_slam_toolbox::srv::SerializePoseGraph>::SharedPtr _serialize;
+  rclcpp::Client<nt_slam_toolbox::srv::DeserializePoseGraph>::SharedPtr _load_map;
 
   std::unique_ptr<std::thread> _thread;
 

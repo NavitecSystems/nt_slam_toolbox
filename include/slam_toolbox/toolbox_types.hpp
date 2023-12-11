@@ -24,10 +24,11 @@
 #include <vector>
 
 #include "tf2_ros/buffer.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2/transform_datatypes.h"
 
 #include "karto_sdk/Mapper.h"
+#include "karto_sdk/Karto.h"
 #include "slam_toolbox/toolbox_msgs.hpp"
 
 // compute linear index for given map coords
@@ -35,6 +36,42 @@
 
 namespace toolbox_types
 {
+
+class NavitrolData: public karto::CustomData
+{
+public:
+  NavitrolData(uint64_t actuator_data, double agv_speed)
+  : CustomData(),
+  actuator_data_(actuator_data),
+  agv_speed_(agv_speed)
+  {
+  }
+
+  virtual const std::string Write() const override
+  {
+    return std::string{actuator_data_} + '\n' + std::string{agv_speed_};
+  }
+
+  virtual void Read(const std::string & rValue) override
+  {
+    std::istringstream sstream(rValue);
+    sstream >> actuator_data_;
+    sstream >> agv_speed_;
+  }
+
+  uint64_t GetActuatorData()
+  {
+    return actuator_data_;
+  }
+
+  double GetAgvSpeed()
+  {
+    return agv_speed_;
+  }
+private:
+  uint64_t actuator_data_;
+  double agv_speed_;
+};
 
 // object containing a scan pointer and a position
 struct PosedScan
@@ -119,7 +156,7 @@ typedef std::map<karto::Name, std::map<int, karto::Vertex<karto::LocalizedRangeS
 typedef std::vector<karto::Edge<karto::LocalizedRangeScan> *> EdgeVector;
 typedef std::map<int, karto::Vertex<karto::LocalizedRangeScan> *> ScanMap;
 typedef std::vector<karto::Vertex<karto::LocalizedRangeScan> *> ScanVector;
-typedef slam_toolbox::srv::DeserializePoseGraph::Request procType;
+typedef nt_slam_toolbox::srv::DeserializePoseGraph::Request procType;
 
 typedef std::unordered_map<int, Eigen::Vector3d>::iterator GraphIterator;
 typedef std::unordered_map<int, Eigen::Vector3d>::const_iterator ConstGraphIterator;

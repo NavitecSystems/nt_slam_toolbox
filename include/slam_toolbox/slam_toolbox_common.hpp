@@ -26,6 +26,7 @@
 #include <vector>
 #include <queue>
 #include <cstdlib>
+#include <cstdint>
 #include <memory>
 #include <fstream>
 
@@ -36,11 +37,14 @@
 #include "tf2_ros/create_timer_ros.h"
 #include "tf2_ros/message_filter.h"
 #include "tf2/LinearMath/Matrix3x3.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#include "tf2_sensor_msgs/tf2_sensor_msgs.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2_sensor_msgs/tf2_sensor_msgs.h"
+#include "std_msgs/msg/u_int64.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 #include "pluginlib/class_loader.hpp"
 
+#include "karto_sdk/Karto.h"
 #include "slam_toolbox/toolbox_types.hpp"
 #include "slam_toolbox/slam_mapper.hpp"
 #include "slam_toolbox/snap_utils.hpp"
@@ -83,13 +87,15 @@ protected:
     std::shared_ptr<nav_msgs::srv::GetMap::Response> res);
   virtual bool serializePoseGraphCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<slam_toolbox::srv::SerializePoseGraph::Request> req,
-    std::shared_ptr<slam_toolbox::srv::SerializePoseGraph::Response> resp);
+    const std::shared_ptr<nt_slam_toolbox::srv::SerializePoseGraph::Request> req,
+    std::shared_ptr<nt_slam_toolbox::srv::SerializePoseGraph::Response> resp);
   virtual bool deserializePoseGraphCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Request> req,
-    std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Response> resp);
+    const std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Request> req,
+    std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Response> resp);
 
+  virtual void actuatorCallback(const std_msgs::msg::UInt64::SharedPtr msg);
+  virtual void agvSpeedCallback(const std_msgs::msg::Float64::SharedPtr msg);
   // Loaders
   void loadSerializedPoseGraph(std::unique_ptr<karto::Mapper> &, std::unique_ptr<karto::Dataset> &);
 
@@ -123,8 +129,8 @@ protected:
   bool isPaused(const PausedApplication & app);
   bool pauseNewMeasurementsCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<slam_toolbox::srv::Pause::Request> req,
-    std::shared_ptr<slam_toolbox::srv::Pause::Response> resp);
+    const std::shared_ptr<std_srvs::srv::SetBool::Request> req,
+    std::shared_ptr<std_srvs::srv::SetBool::Response> resp);
 
   // ROS-y-ness
   std::unique_ptr<tf2_ros::Buffer> tf_;
@@ -136,21 +142,25 @@ protected:
   std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::MapMetaData>> sstm_;
   std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>> pose_pub_;
   std::shared_ptr<rclcpp::Service<nav_msgs::srv::GetMap>> ssMap_;
-  std::shared_ptr<rclcpp::Service<slam_toolbox::srv::Pause>> ssPauseMeasurements_;
-  std::shared_ptr<rclcpp::Service<slam_toolbox::srv::SerializePoseGraph>> ssSerialize_;
-  std::shared_ptr<rclcpp::Service<slam_toolbox::srv::DeserializePoseGraph>> ssDesserialize_;
+  std::shared_ptr<rclcpp::Service<std_srvs::srv::SetBool>> ssPauseMeasurements_;
+  std::shared_ptr<rclcpp::Service<nt_slam_toolbox::srv::SerializePoseGraph>> ssSerialize_;
+  std::shared_ptr<rclcpp::Service<nt_slam_toolbox::srv::DeserializePoseGraph>> ssDesserialize_;
+  rclcpp::Subscription<std_msgs::msg::UInt64>::SharedPtr subActuators_;
+  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr subAgvSpeed_;
 
   // Storage for ROS parameters
   std::string odom_frame_, map_frame_, base_frame_, map_name_, scan_topic_;
-  bool use_map_saver_;
   rclcpp::Duration transform_timeout_, minimum_time_interval_;
   std_msgs::msg::Header scan_header;
-  int throttle_scans_, scan_queue_size_;
+  int throttle_scans_;
 
   double resolution_;
   double position_covariance_scale_;
   double yaw_covariance_scale_;
   bool first_measurement_, enable_interactive_mode_;
+
+  uint64_t actuator_state_ = 0UL;
+  double agv_speed_ = 0.0;
 
   // Book keeping
   std::unique_ptr<mapper_utils::SMapper> smapper_;
@@ -173,6 +183,7 @@ protected:
   ProcessType processor_type_;
   std::unique_ptr<karto::Pose2> process_near_pose_;
   tf2::Transform reprocessing_transform_;
+  std::vector<std::unique_ptr<karto::CustomData>> custom_data_;
 
   // pluginlib
   pluginlib::ClassLoader<karto::ScanSolver> solver_loader_;

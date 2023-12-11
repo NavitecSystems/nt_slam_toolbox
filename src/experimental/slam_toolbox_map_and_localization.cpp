@@ -106,8 +106,8 @@ void MapAndLocalizationSlamToolbox::loadPoseGraphByParams()
 /*****************************************************************************/
 bool MapAndLocalizationSlamToolbox::serializePoseGraphCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::SerializePoseGraph::Request> req,
-  std::shared_ptr<slam_toolbox::srv::SerializePoseGraph::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::SerializePoseGraph::Request> req,
+  std::shared_ptr<nt_slam_toolbox::srv::SerializePoseGraph::Response> resp)
 /*****************************************************************************/
 {
   if (processor_type_ == PROCESS_LOCALIZATION) {
@@ -121,8 +121,8 @@ bool MapAndLocalizationSlamToolbox::serializePoseGraphCallback(
 /*****************************************************************************/
 bool MapAndLocalizationSlamToolbox::deserializePoseGraphCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Request> req,
-  std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Request> req,
+  std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Response> resp)
 /*****************************************************************************/
 {
   if (processor_type_ == PROCESS_LOCALIZATION) {
@@ -175,10 +175,3 @@ LocalizedRangeScan * MapAndLocalizationSlamToolbox::addScan(
 }
 
 }  // namespace slam_toolbox
-
-#include "rclcpp_components/register_node_macro.hpp"
-
-// Register the component with class_loader.
-// This acts as a sort of entry point, allowing the component to be discoverable when its library
-// is being loaded into a running process.
-RCLCPP_COMPONENTS_REGISTER_NODE(slam_toolbox::MapAndLocalizationSlamToolbox)

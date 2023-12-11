@@ -54,14 +54,14 @@ void LocalizationSlamToolbox::loadPoseGraphByParams()
   geometry_msgs::msg::Pose2D pose;
   bool dock = false;
   if (shouldStartWithPoseGraph(filename, pose, dock)) {
-    std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Request> req =
-      std::make_shared<slam_toolbox::srv::DeserializePoseGraph::Request>();
-    std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Response> resp =
-      std::make_shared<slam_toolbox::srv::DeserializePoseGraph::Response>();
+    std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Request> req =
+      std::make_shared<nt_slam_toolbox::srv::DeserializePoseGraph::Request>();
+    std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Response> resp =
+      std::make_shared<nt_slam_toolbox::srv::DeserializePoseGraph::Response>();
     req->initial_pose = pose;
     req->filename = filename;
     req->match_type =
-      slam_toolbox::srv::DeserializePoseGraph::Request::LOCALIZE_AT_POSE;
+      nt_slam_toolbox::srv::DeserializePoseGraph::Request::LOCALIZE_AT_POSE;
     if (dock) {
       RCLCPP_WARN(get_logger(),
         "LocalizationSlamToolbox: Starting localization "
@@ -89,8 +89,8 @@ bool LocalizationSlamToolbox::clearLocalizationBuffer(
 /*****************************************************************************/
 bool LocalizationSlamToolbox::serializePoseGraphCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::SerializePoseGraph::Request> req,
-  std::shared_ptr<slam_toolbox::srv::SerializePoseGraph::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::SerializePoseGraph::Request> req,
+  std::shared_ptr<nt_slam_toolbox::srv::SerializePoseGraph::Response> resp)
 /*****************************************************************************/
 {
   RCLCPP_ERROR(get_logger(), "LocalizationSlamToolbox: Cannot call serialize map "
@@ -101,8 +101,8 @@ bool LocalizationSlamToolbox::serializePoseGraphCallback(
 /*****************************************************************************/
 bool LocalizationSlamToolbox::deserializePoseGraphCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Request> req,
-  std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Request> req,
+  std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Response> resp)
 /*****************************************************************************/
 {
   if (req->match_type != procType::LOCALIZE_AT_POSE) {
@@ -150,7 +150,7 @@ LocalizedRangeScan * LocalizationSlamToolbox::addScan(
 {
   boost::mutex::scoped_lock l(pose_mutex_);
 
-  if (processor_type_ == PROCESS_LOCALIZATION && process_near_pose_) {
+  if (PROCESS_LOCALIZATION && process_near_pose_) {
     processor_type_ = PROCESS_NEAR_REGION;
   }
 
@@ -239,10 +239,3 @@ void LocalizationSlamToolbox::localizePoseCallback(
 }
 
 }  // namespace slam_toolbox
-
-#include "rclcpp_components/register_node_macro.hpp"
-
-// Register the component with class_loader.
-// This acts as a sort of entry point, allowing the component to be discoverable when its library
-// is being loaded into a running process.
-RCLCPP_COMPONENTS_REGISTER_NODE(slam_toolbox::LocalizationSlamToolbox)

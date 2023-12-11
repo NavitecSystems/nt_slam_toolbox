@@ -35,10 +35,10 @@
 #include "tf2_ros/transform_listener.h"
 #include "tf2_ros/message_filter.h"
 #include "tf2/LinearMath/Matrix3x3.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2/utils.h"
 
-#include "../lib/karto_sdk/include/karto_sdk/Mapper.h"
+#include "karto_sdk/Mapper.h"
 #include "slam_toolbox/toolbox_types.hpp"
 #include "slam_toolbox/toolbox_msgs.hpp"
 #include "slam_toolbox/laser_utils.hpp"
@@ -62,12 +62,12 @@ private:
   // callback
   bool mergeMapCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<slam_toolbox::srv::MergeMaps::Request> req,
-    std::shared_ptr<slam_toolbox::srv::MergeMaps::Response> resp);
+    const std::shared_ptr<nt_slam_toolbox::srv::MergeMaps::Request> req,
+    std::shared_ptr<nt_slam_toolbox::srv::MergeMaps::Response> resp);
   bool addSubmapCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<slam_toolbox::srv::AddSubmap::Request> req,
-    std::shared_ptr<slam_toolbox::srv::AddSubmap::Response> resp);
+    const std::shared_ptr<nt_slam_toolbox::srv::AddSubmap::Request> req,
+    std::shared_ptr<nt_slam_toolbox::srv::AddSubmap::Response> resp);
   void processInteractiveFeedback(
     visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr feedback);
   void kartoToROSOccupancyGrid(
@@ -84,8 +84,8 @@ private:
   // ROS-y-ness
   std::vector<std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::MapMetaData>>> sstmS_;
   std::vector<std::shared_ptr<rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>>> sstS_;
-  std::shared_ptr<rclcpp::Service<slam_toolbox::srv::MergeMaps>> ssMap_;
-  std::shared_ptr<rclcpp::Service<slam_toolbox::srv::AddSubmap>> ssSubmap_;
+  std::shared_ptr<rclcpp::Service<nt_slam_toolbox::srv::MergeMaps>> ssMap_;
+  std::shared_ptr<rclcpp::Service<nt_slam_toolbox::srv::AddSubmap>> ssSubmap_;
 
   // karto bookkeeping
   std::map<std::string, laser_utils::LaserMetadata> lasers_;

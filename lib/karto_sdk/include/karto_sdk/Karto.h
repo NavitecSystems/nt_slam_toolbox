@@ -50,7 +50,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <shared_mutex>
-#include <mutex>
 
 #ifdef USE_POCO
 #include <Poco/Mutex.h>

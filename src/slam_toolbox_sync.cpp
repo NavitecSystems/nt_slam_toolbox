@@ -28,7 +28,7 @@ SynchronousSlamToolbox::SynchronousSlamToolbox(rclcpp::NodeOptions options)
 : SlamToolbox(options)
 /*****************************************************************************/
 {
-  ssClear_ = this->create_service<slam_toolbox::srv::ClearQueue>("slam_toolbox/clear_queue",
+  ssClear_ = this->create_service<nt_slam_toolbox::srv::ClearQueue>("slam_toolbox/clear_queue",
       std::bind(&SynchronousSlamToolbox::clearQueueCallback, this,
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
@@ -42,27 +42,18 @@ void SynchronousSlamToolbox::run()
 {
   rclcpp::Rate r(100);
   while (rclcpp::ok()) {
-    if (!isPaused(PROCESSING)) {
-      PosedScan scan_w_pose(nullptr, karto::Pose2()); // dummy, updated in critical section
-      bool queue_empty = true;
-      {
-        boost::mutex::scoped_lock lock(q_mutex_);
-        queue_empty = q_.empty();
-        if (!queue_empty) {
-          scan_w_pose = q_.front();
-          q_.pop();
+    if (!q_.empty() && !isPaused(PROCESSING)) {
+      PosedScan scan_w_pose = q_.front();
+      q_.pop();
 
-          if (q_.size() > 10) {
-            RCLCPP_WARN(get_logger(), "Queue size has grown to: %i. "
-              "Recommend stopping until message is gone if online mapping.",
-              (int)q_.size());
-          }
-        }
+      if (q_.size() > 10) {
+        RCLCPP_WARN(get_logger(), "Queue size has grown to: %i. "
+          "Recommend stopping until message is gone if online mapping.",
+          (int)q_.size());
       }
-      if (!queue_empty) {
-        addScan(getLaser(scan_w_pose.scan), scan_w_pose);
-        continue;
-      }
+
+      addScan(getLaser(scan_w_pose.scan), scan_w_pose);
+      continue;
     }
 
     r.sleep();
@@ -94,7 +85,6 @@ void SynchronousSlamToolbox::laserCallback(
 
   // if sync and valid, add to queue
   if (shouldProcessScan(scan, pose)) {
-    boost::mutex::scoped_lock lock(q_mutex_);
     q_.push(PosedScan(scan, pose));
   }
 }
@@ -102,8 +92,8 @@ void SynchronousSlamToolbox::laserCallback(
 /*****************************************************************************/
 bool SynchronousSlamToolbox::clearQueueCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::ClearQueue::Request> req,
-  std::shared_ptr<slam_toolbox::srv::ClearQueue::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::ClearQueue::Request> req,
+  std::shared_ptr<nt_slam_toolbox::srv::ClearQueue::Response> resp)
 /*****************************************************************************/
 {
   RCLCPP_INFO(get_logger(), "SynchronousSlamToolbox: "
@@ -118,8 +108,8 @@ bool SynchronousSlamToolbox::clearQueueCallback(
 /*****************************************************************************/
 bool SynchronousSlamToolbox::deserializePoseGraphCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Request> req,
-  std::shared_ptr<slam_toolbox::srv::DeserializePoseGraph::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Request> req,
+  std::shared_ptr<nt_slam_toolbox::srv::DeserializePoseGraph::Response> resp)
 /*****************************************************************************/
 {
   if (req->match_type == procType::LOCALIZE_AT_POSE) {
@@ -131,10 +121,3 @@ bool SynchronousSlamToolbox::deserializePoseGraphCallback(
 }
 
 }  // namespace slam_toolbox
-
-#include "rclcpp_components/register_node_macro.hpp"
-
-// Register the component with class_loader.
-// This acts as a sort of entry point, allowing the component to be discoverable when its library
-// is being loaded into a running process.
-RCLCPP_COMPONENTS_REGISTER_NODE(slam_toolbox::SynchronousSlamToolbox)

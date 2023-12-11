@@ -44,12 +44,12 @@ LoopClosureAssistant::LoopClosureAssistant(
   tfB_ = std::make_unique<tf2_ros::TransformBroadcaster>(node_);
   solver_ = mapper_->getScanSolver();
 
-  ssClear_manual_ = node_->create_service<slam_toolbox::srv::Clear>(
-    "slam_toolbox/clear_changes", std::bind(&LoopClosureAssistant::clearChangesCallback, 
+  ssClear_manual_ = node_->create_service<nt_slam_toolbox::srv::Clear>(
+    "nt_slam_toolbox/clear_changes", std::bind(&LoopClosureAssistant::clearChangesCallback, 
     this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   
-  ssLoopClosure_ = node_->create_service<slam_toolbox::srv::LoopClosure>(
-    "slam_toolbox/manual_loop_closure", std::bind(&LoopClosureAssistant::manualLoopClosureCallback,
+  ssLoopClosure_ = node_->create_service<nt_slam_toolbox::srv::LoopClosure>(
+    "nt_slam_toolbox/manual_loop_closure", std::bind(&LoopClosureAssistant::manualLoopClosureCallback,
     this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   
   scan_publisher_ = node_->create_publisher<sensor_msgs::msg::LaserScan>(
@@ -61,21 +61,16 @@ LoopClosureAssistant::LoopClosureAssistant(
     node_->get_node_logging_interface(),
     node_->get_node_topics_interface(),
     node_->get_node_services_interface());
-  ssInteractive_ = node_->create_service<slam_toolbox::srv::ToggleInteractive>(
-    "slam_toolbox/toggle_interactive_mode", std::bind(&LoopClosureAssistant::interactiveModeCallback,
+  ssInteractive_ = node_->create_service<nt_slam_toolbox::srv::ToggleInteractive>(
+    "nt_slam_toolbox/toggle_interactive_mode", std::bind(&LoopClosureAssistant::interactiveModeCallback,
     this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
 
   marker_publisher_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "slam_toolbox/graph_visualization", rclcpp::QoS(1));
+  slam_pose_publisher_ = node_->create_publisher<custom_ros2_messages::msg::SlamPoseArray>(
+    "slam_toolbox/slam_poses", rclcpp::QoS(1));
   map_frame_ = node->get_parameter("map_frame").as_string();
-}
-
-/*****************************************************************************/
-void LoopClosureAssistant::setMapper(karto::Mapper * mapper)
-/*****************************************************************************/
-{
-  mapper_ = mapper;
 }
 
 /*****************************************************************************/
@@ -90,7 +85,7 @@ void LoopClosureAssistant::processInteractiveFeedback(const
     return;
   }
 
-  const int id = std::stoi(feedback->marker_name, nullptr, 10);
+  const int id = std::stoi(feedback->marker_name, nullptr, 10) - 1;
 
   // was depressed, something moved, and now released
   if (feedback->event_type ==
@@ -145,6 +140,7 @@ void LoopClosureAssistant::processInteractiveFeedback(const
   }
 }
 
+
 /*****************************************************************************/
 void LoopClosureAssistant::publishGraph()
 /*****************************************************************************/
@@ -173,7 +169,7 @@ void LoopClosureAssistant::publishGraph()
   }
 
   visualization_msgs::msg::MarkerArray marray;
-
+  custom_ros2_messages::msg::SlamPoseArray parray;
   // clear existing markers to account for any removed nodes
   visualization_msgs::msg::Marker clear;
   clear.header.stamp = node_->now();
@@ -182,14 +178,50 @@ void LoopClosureAssistant::publishGraph()
 
   visualization_msgs::msg::Marker m = vis_utils::toMarker(map_frame_, "slam_toolbox", 0.1, node_);
 
+  custom_ros2_messages::msg::SlamPose customPose{};
+
   // add map nodes
   for (const auto & sensor_name : vertices) {
+    std::vector<karto::Vertex<karto::LocalizedRangeScan>*> sorted_v;
+    sorted_v.reserve(sensor_name.second.size());
+    parray.poses.reserve(sensor_name.second.size());
+    marray.markers.reserve(sensor_name.second.size());
+
     for (const auto & vertex : sensor_name.second) {
-      m.color.g = vertex.first < first_localization_id ? 0.0 : 1.0;
-      const auto & pose = vertex.second->GetObject()->GetCorrectedPose();
-      m.id = vertex.first;
+      sorted_v.push_back(vertex.second);
+    }
+
+    std::sort(sorted_v.begin(), sorted_v.end(), [](auto a, auto b){ return a->GetObject()->GetTime() < b->GetObject()->GetTime(); });
+    int i = 0;
+    for (const auto vertex : /*sensor_name.second*/ sorted_v) {
+      m.color.g = 0.0;
+      const auto & pose = vertex->GetObject()->GetCorrectedPose();
+      m.id = i++;
       m.pose.position.x = pose.GetX();
       m.pose.position.y = pose.GetY();
+      m.pose.orientation.x = 0.0;
+      m.pose.orientation.y = 0.0;
+      m.pose.orientation.z = sin(pose.GetHeading()/2.0);
+      m.pose.orientation.w = cos(pose.GetHeading()/2.0);
+
+      customPose.x = pose.GetX();
+      customPose.y = pose.GetY();
+      customPose.heading = pose.GetHeading();
+      customPose.time = vertex->GetObject()->GetTime();
+
+      auto& customData = vertex->GetObject()->GetCustomData();
+      if(!customData.empty())
+      {
+        auto navitrolData = static_cast<NavitrolData*>(customData[0]);
+        customPose.binary_actuators = navitrolData->GetActuatorData();
+        customPose.agv_speed = navitrolData->GetAgvSpeed();
+      }
+      else
+      {
+        customPose.binary_actuators = 0;
+        customPose.agv_speed = 0.0;
+      }
+      parray.poses.push_back(customPose);
 
       if (interactive_mode && enable_interactive_mode_) {
         visualization_msgs::msg::InteractiveMarker int_marker =
@@ -262,13 +294,14 @@ void LoopClosureAssistant::publishGraph()
   // if disabled, clears out old markers
   interactive_server_->applyChanges();
   marker_publisher_->publish(marray);
+  slam_pose_publisher_->publish(parray);
 }
 
 /*****************************************************************************/
 bool LoopClosureAssistant::manualLoopClosureCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::LoopClosure::Request> req, 
-  std::shared_ptr<slam_toolbox::srv::LoopClosure::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::LoopClosure::Request> req, 
+  std::shared_ptr<nt_slam_toolbox::srv::LoopClosure::Response> resp)
 /*****************************************************************************/
 {
   if(!enable_interactive_mode_)
@@ -316,8 +349,8 @@ bool LoopClosureAssistant::manualLoopClosureCallback(
 /*****************************************************************************/
 bool LoopClosureAssistant::interactiveModeCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::ToggleInteractive::Request>  req,
-  std::shared_ptr<slam_toolbox::srv::ToggleInteractive::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::ToggleInteractive::Request>  req,
+  std::shared_ptr<nt_slam_toolbox::srv::ToggleInteractive::Response> resp)
 /*****************************************************************************/
 {
   if(!enable_interactive_mode_)
@@ -360,8 +393,8 @@ void LoopClosureAssistant::moveNode(
 /*****************************************************************************/
 bool LoopClosureAssistant::clearChangesCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<slam_toolbox::srv::Clear::Request> req, 
-  std::shared_ptr<slam_toolbox::srv::Clear::Response> resp)
+  const std::shared_ptr<nt_slam_toolbox::srv::Clear::Request> req, 
+  std::shared_ptr<nt_slam_toolbox::srv::Clear::Response> resp)
 /*****************************************************************************/
 {
   if(!enable_interactive_mode_)

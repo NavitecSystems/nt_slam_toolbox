@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(slam_toolbox)
+project(nt_slam_toolbox)
 
 set(CMAKE_BUILD_TYPE Release) #None, Debug, Release, RelWithDebInfo, MinSizeRel
 if(NOT CMAKE_CXX_STANDARD)
@@ -25,13 +25,14 @@ find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(nav2_map_server REQUIRED)
 find_package(rviz_common REQUIRED)
 find_package(rviz_default_plugins REQUIRED)
 find_package(rviz_ogre_vendor REQUIRED)
 find_package(rviz_rendering REQUIRED)
 find_package(interactive_markers REQUIRED)
+find_package(custom_ros2_messages REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Test Concurrent)
-find_package(rclcpp_components REQUIRED)
 
 #karto_sdk lib
 set(BUILD_SHARED_LIBS ON)
@@ -48,6 +49,7 @@ set(dependencies
   tf2_ros
   visualization_msgs
   pluginlib
+  nav2_map_server
   tf2_geometry_msgs
   tf2_sensor_msgs
   std_msgs
@@ -58,8 +60,8 @@ set(dependencies
   rviz_ogre_vendor
   rviz_rendering
   interactive_markers
+  custom_ros2_messages
   Qt5
-  rclcpp_components
 )
 
 set(libraries
@@ -75,9 +77,9 @@ set(libraries
 
 find_package(PkgConfig REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(CHOLMOD REQUIRED)
 find_package(CSparse REQUIRED)
 find_package(G2O REQUIRED)
+find_package(Cholmod REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(Ceres REQUIRED COMPONENTS SuiteSparse)
 
@@ -89,13 +91,13 @@ include_directories(include lib/karto_sdk/include
                             ${EIGEN3_INCLUDE_DIRS}
                             ${CHOLMOD_INCLUDE_DIR}
                             ${Boost_INCLUDE_DIRS}
+                            ${TBB_INCLUDE_DIRS}
                             ${CERES_INCLUDES}
 )
 
 add_definitions(${EIGEN3_DEFINITIONS})
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  srvs/Pause.srv
   srvs/ClearQueue.srv
   srvs/ToggleInteractive.srv
   srvs/Clear.srv
@@ -121,8 +123,7 @@ target_include_directories(SlamToolboxPlugin PUBLIC
   ${OGRE_INCLUDE_DIRS}
 )
 target_link_libraries(SlamToolboxPlugin ${QT_LIBRARIES} rviz_common::rviz_common)
-rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
-target_link_libraries(SlamToolboxPlugin "${cpp_typesupport_target}")
+rosidl_target_interfaces(SlamToolboxPlugin ${PROJECT_NAME} "rosidl_typesupport_cpp")
 target_compile_definitions(SlamToolboxPlugin PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
 target_compile_definitions(SlamToolboxPlugin PRIVATE "RVIZ_DEFAULT_PLUGINS_BUILDING_LIBRARY")
 pluginlib_export_plugin_description_file(rviz_common rviz_plugins.xml) 
@@ -132,11 +133,11 @@ add_library(ceres_solver_plugin solvers/ceres_solver.cpp)
 ament_target_dependencies(ceres_solver_plugin ${dependencies})
 target_link_libraries(ceres_solver_plugin ${CERES_LIBRARIES}
                                           ${Boost_LIBRARIES}
+                                          ${TBB_LIBRARIES}
                                           kartoSlamToolbox
 )
-rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
-target_link_libraries(ceres_solver_plugin "${cpp_typesupport_target}")
-pluginlib_export_plugin_description_file(slam_toolbox solver_plugins.xml)
+rosidl_target_interfaces(ceres_solver_plugin ${PROJECT_NAME} "rosidl_typesupport_cpp")
+pluginlib_export_plugin_description_file(nt_slam_toolbox solver_plugins.xml)
 
 #### Tool lib for mapping
 add_library(toolbox_common src/slam_toolbox_common.cpp src/map_saver.cpp src/loop_closure_assistant.cpp src/laser_utils.cpp src/slam_mapper.cpp)
@@ -144,8 +145,7 @@ ament_target_dependencies(toolbox_common
   ${dependencies}
 )
 target_link_libraries(toolbox_common kartoSlamToolbox ${Boost_LIBRARIES})
-rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
-target_link_libraries(toolbox_common "${cpp_typesupport_target}")
+rosidl_target_interfaces(toolbox_common ${PROJECT_NAME} "rosidl_typesupport_cpp")
 
 #### Mapping executibles
 add_library(async_slam_toolbox src/slam_toolbox_async.cpp)
@@ -187,20 +187,14 @@ target_link_libraries(merge_maps_kinematic kartoSlamToolbox toolbox_common)
 #  target_link_libraries(lifelong_metrics_test lifelong_slam_toolbox)
 #endif()
 
-rclcpp_components_register_nodes(async_slam_toolbox "slam_toolbox::AsynchronousSlamToolbox")
-rclcpp_components_register_nodes(sync_slam_toolbox "slam_toolbox::SynchronousSlamToolbox")
-rclcpp_components_register_nodes(localization_slam_toolbox "slam_toolbox::LocalizationSlamToolbox")
-rclcpp_components_register_nodes(lifelong_slam_toolbox "slam_toolbox::LifelongSlamToolbox")
-rclcpp_components_register_nodes(map_and_localization_slam_toolbox "slam_toolbox::MapAndLocalizationSlamToolbox")
-
 #### Install
 install(TARGETS async_slam_toolbox_node
                 sync_slam_toolbox_node
                 localization_slam_toolbox_node
+                lifelong_slam_toolbox_node
                 map_and_localization_slam_toolbox_node
                 merge_maps_kinematic
                 ${libraries}
-                kartoSlamToolbox
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
@@ -220,7 +214,6 @@ install(DIRECTORY include/
 
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
-  PATTERN "lifelong_launch.py" EXCLUDE
 )
 
 install(DIRECTORY config
@@ -232,7 +225,7 @@ install(FILES solver_plugins.xml rviz_plugins.xml
 )
 
 ament_export_include_directories(include)
-ament_export_libraries(${libraries} kartoSlamToolbox)
+ament_export_libraries(${libraries})
 ament_export_dependencies(${dependencies})
 ament_export_targets(SlamToolboxPlugin HAS_LIBRARY_TARGET)
 ament_package()

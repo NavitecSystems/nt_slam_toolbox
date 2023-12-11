@@ -26,11 +26,11 @@
 #include <map>
 
 #include "tf2_ros/transform_broadcaster.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"
 #include "rclcpp/rclcpp.hpp"
 #include "interactive_markers/interactive_marker_server.hpp"
 #include "interactive_markers/menu_handler.hpp"
+#include "custom_ros2_messages/msg/slam_pose_array.hpp"
 
 #include "slam_toolbox/toolbox_types.hpp"
 #include "slam_toolbox/laser_utils.hpp"
@@ -53,21 +53,20 @@ public:
   void processInteractiveFeedback(
     const visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr feedback);
   void publishGraph();
-  void setMapper(karto::Mapper * mapper);
 
 private:
   bool manualLoopClosureCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<slam_toolbox::srv::LoopClosure::Request> req, 
-    std::shared_ptr<slam_toolbox::srv::LoopClosure::Response> resp);
+    const std::shared_ptr<nt_slam_toolbox::srv::LoopClosure::Request> req, 
+    std::shared_ptr<nt_slam_toolbox::srv::LoopClosure::Response> resp);
   bool clearChangesCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<slam_toolbox::srv::Clear::Request> req, 
-    std::shared_ptr<slam_toolbox::srv::Clear::Response> resp);
+    const std::shared_ptr<nt_slam_toolbox::srv::Clear::Request> req, 
+    std::shared_ptr<nt_slam_toolbox::srv::Clear::Response> resp);
   bool interactiveModeCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<slam_toolbox::srv::ToggleInteractive::Request>  req,
-    std::shared_ptr<slam_toolbox::srv::ToggleInteractive::Response> resp);
+    const std::shared_ptr<nt_slam_toolbox::srv::ToggleInteractive::Request>  req,
+    std::shared_ptr<nt_slam_toolbox::srv::ToggleInteractive::Response> resp);
 
   void moveNode(const int& id, const Eigen::Vector3d& pose);
   void addMovedNodes(const int& id, Eigen::Vector3d vec);
@@ -75,10 +74,11 @@ private:
   std::unique_ptr<tf2_ros::TransformBroadcaster> tfB_;
   laser_utils::ScanHolder * scan_holder_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;
+  rclcpp::Publisher<custom_ros2_messages::msg::SlamPoseArray>::SharedPtr slam_pose_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr scan_publisher_;
-  rclcpp::Service<slam_toolbox::srv::Clear>::SharedPtr ssClear_manual_;
-  rclcpp::Service<slam_toolbox::srv::LoopClosure>::SharedPtr ssLoopClosure_;
-  rclcpp::Service<slam_toolbox::srv::ToggleInteractive>::SharedPtr ssInteractive_;
+  rclcpp::Service<nt_slam_toolbox::srv::Clear>::SharedPtr ssClear_manual_;
+  rclcpp::Service<nt_slam_toolbox::srv::LoopClosure>::SharedPtr ssLoopClosure_;
+  rclcpp::Service<nt_slam_toolbox::srv::ToggleInteractive>::SharedPtr ssInteractive_;
   boost::mutex moved_nodes_mutex_;
   std::map<int, Eigen::Vector3d> moved_nodes_;
   karto::Mapper * mapper_;

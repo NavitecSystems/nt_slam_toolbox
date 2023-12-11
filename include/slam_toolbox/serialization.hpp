@@ -34,7 +34,7 @@ inline bool fileExists(const std::string & name)
   return stat(name.c_str(), &buffer) == 0;
 }
 
-inline bool write(
+inline void write(
   const std::string & filename,
   karto::Mapper & mapper,
   karto::Dataset & dataset,
@@ -43,11 +43,9 @@ inline bool write(
   try {
     mapper.SaveToFile(filename + std::string(".posegraph"));
     dataset.SaveToFile(filename + std::string(".data"));
-    return true;
   } catch (boost::archive::archive_exception e) {
     RCLCPP_ERROR(node->get_logger(),
       "Failed to write file: Exception %s", e.what());
-    return false;
   }
 }
 
