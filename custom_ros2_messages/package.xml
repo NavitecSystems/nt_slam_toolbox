@@ -4,7 +4,7 @@
   <name>custom_ros2_messages</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="antti.parkkonen@navitec.fi">AnttiPNavitec</maintainer>
+  <maintainer email="navitec@todo.todo">navitec</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

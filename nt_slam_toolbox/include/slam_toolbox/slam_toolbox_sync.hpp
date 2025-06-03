@@ -47,6 +47,7 @@ protected:
 
   std::queue<PosedScan> q_;
   std::shared_ptr<rclcpp::Service<nt_slam_toolbox::srv::ClearQueue>> ssClear_;
+  boost::mutex q_mutex_;
 };
 
 }  // namespace slam_toolbox

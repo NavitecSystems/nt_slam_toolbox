@@ -45,7 +45,7 @@ LoopClosureAssistant::LoopClosureAssistant(
   solver_ = mapper_->getScanSolver();
 
   ssClear_manual_ = node_->create_service<nt_slam_toolbox::srv::Clear>(
-    "nt_slam_toolbox/clear_changes", std::bind(&LoopClosureAssistant::clearChangesCallback, 
+    "nt_slam_toolbox/clear_changes", std::bind(&LoopClosureAssistant::clearChangesCallback,
     this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
   
   ssLoopClosure_ = node_->create_service<nt_slam_toolbox::srv::LoopClosure>(
@@ -74,6 +74,13 @@ LoopClosureAssistant::LoopClosureAssistant(
 }
 
 /*****************************************************************************/
+void LoopClosureAssistant::setMapper(karto::Mapper * mapper)
+/*****************************************************************************/
+{
+  mapper_ = mapper;
+}
+
+/*****************************************************************************/
 void LoopClosureAssistant::processInteractiveFeedback(const
   visualization_msgs::msg::InteractiveMarkerFeedback::ConstSharedPtr feedback)
 /*****************************************************************************/
@@ -85,7 +92,7 @@ void LoopClosureAssistant::processInteractiveFeedback(const
     return;
   }
 
-  const int id = std::stoi(feedback->marker_name, nullptr, 10) - 1;
+  const int id = std::stoi(feedback->marker_name, nullptr, 10);
 
   // was depressed, something moved, and now released
   if (feedback->event_type ==
@@ -139,7 +146,6 @@ void LoopClosureAssistant::processInteractiveFeedback(const
     scan_publisher_->publish(scan);
   }
 }
-
 
 /*****************************************************************************/
 void LoopClosureAssistant::publishGraph()
@@ -300,7 +306,7 @@ void LoopClosureAssistant::publishGraph()
 /*****************************************************************************/
 bool LoopClosureAssistant::manualLoopClosureCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<nt_slam_toolbox::srv::LoopClosure::Request> req, 
+  const std::shared_ptr<nt_slam_toolbox::srv::LoopClosure::Request> req,
   std::shared_ptr<nt_slam_toolbox::srv::LoopClosure::Response> resp)
 /*****************************************************************************/
 {
@@ -393,7 +399,7 @@ void LoopClosureAssistant::moveNode(
 /*****************************************************************************/
 bool LoopClosureAssistant::clearChangesCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
-  const std::shared_ptr<nt_slam_toolbox::srv::Clear::Request> req, 
+  const std::shared_ptr<nt_slam_toolbox::srv::Clear::Request> req,
   std::shared_ptr<nt_slam_toolbox::srv::Clear::Response> resp)
 /*****************************************************************************/
 {

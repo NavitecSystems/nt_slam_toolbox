@@ -184,7 +184,10 @@ void CeresSolver::Compute()
   }
 
   // populate contraint for static initial pose
-  if (!was_constant_set_ && first_node_ != nodes_->end()) {
+  if (!was_constant_set_ && first_node_ != nodes_->end() &&
+      problem_->HasParameterBlock(&first_node_->second(0)) &&
+      problem_->HasParameterBlock(&first_node_->second(1)) &&
+      problem_->HasParameterBlock(&first_node_->second(2))) {
     RCLCPP_DEBUG(node_->get_logger(),
       "CeresSolver: Setting first node as a constant pose:"
       "%0.2f, %0.2f, %0.2f.", first_node_->second(0),
@@ -351,6 +354,24 @@ void CeresSolver::RemoveNode(kt_int32s id)
   boost::mutex::scoped_lock lock(nodes_mutex_);
   GraphIterator nodeit = nodes_->find(id);
   if (nodeit != nodes_->end()) {
+    if (problem_->HasParameterBlock(&nodeit->second(0)) &&
+        problem_->HasParameterBlock(&nodeit->second(1)) &&
+        problem_->HasParameterBlock(&nodeit->second(2)))
+    {
+      problem_->RemoveParameterBlock(&nodeit->second(0));
+      problem_->RemoveParameterBlock(&nodeit->second(1));
+      problem_->RemoveParameterBlock(&nodeit->second(2));
+      RCLCPP_DEBUG(
+        node_->get_logger(),
+        "RemoveNode: Removed node id %d" ,nodeit->first);
+    }
+    else
+    {
+      RCLCPP_DEBUG(
+        node_->get_logger(),
+        "RemoveNode: Missing parameter blocks for "
+        "node id %d", nodeit->first);
+    }
     nodes_->erase(nodeit);
   } else {
     RCLCPP_ERROR(node_->get_logger(), "RemoveNode: Failed to find node matching id %i",
